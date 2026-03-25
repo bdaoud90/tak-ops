@@ -1,0 +1,17 @@
+---
+- name: Install base packages
+  ansible.builtin.apt:
+    name:
+      - curl
+      - jq
+      - unzip
+      - ufw
+    update_cache: true
+
+- name: Ensure TAK root exists
+  ansible.builtin.file:
+    path: "{{ tak_install_root }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"

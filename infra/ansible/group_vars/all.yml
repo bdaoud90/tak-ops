@@ -1,0 +1,5 @@
+---
+tak_manual_staging_dir: /opt/tak/manual
+tak_install_root: /opt/tak
+backup_dir: /var/backups/tak
+reverse_proxy_server_name: tak.example.com
