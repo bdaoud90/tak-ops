@@ -1,0 +1,14 @@
+---
+- name: Install edge node baseline packages
+  ansible.builtin.apt:
+    name:
+      - rsync
+      - avahi-daemon
+      - chrony
+    update_cache: true
+
+- name: Create edge cache directory
+  ansible.builtin.file:
+    path: /var/lib/tak-edge-cache
+    state: directory
+    mode: "0755"

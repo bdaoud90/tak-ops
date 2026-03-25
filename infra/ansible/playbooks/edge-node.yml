@@ -1,0 +1,6 @@
+---
+- name: Configure edge node
+  hosts: tak_servers
+  become: true
+  roles:
+    - edge_node

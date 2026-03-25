@@ -1,0 +1,10 @@
+---
+- name: Configure TAK cloud host
+  hosts: tak_servers
+  become: true
+  roles:
+    - base_bootstrap
+    - hardening
+    - reverse_proxy_tls
+    - backup
+    - tak_server_placeholder
