@@ -1,0 +1,11 @@
+variable "do_token" { type = string }
+variable "region" { type = string }
+variable "project_name" { type = string }
+variable "droplet_size" { type = string }
+variable "ssh_key_fingerprint" { type = string }
+variable "enable_dns" { type = bool }
+variable "domain" { type = string }
+variable "subdomain" { type = string }
+variable "allowed_ingress_cidrs" { type = list(string) }
+variable "allowed_tcp_ports" { type = list(number) }
+variable "allowed_udp_ports" { type = list(number) }

@@ -1,0 +1,26 @@
+---
+- name: Install nginx and certbot
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - certbot
+      - python3-certbot-nginx
+    update_cache: true
+
+- name: Deploy basic reverse proxy placeholder
+  ansible.builtin.copy:
+    dest: /etc/nginx/sites-available/tak-placeholder.conf
+    mode: "0644"
+    content: |
+      server {
+        listen 443 ssl;
+        server_name {{ reverse_proxy_server_name }};
+
+        # Manual operator step: install valid certificates for production.
+        ssl_certificate /etc/ssl/certs/ssl-cert-snakeoil.pem;
+        ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
+
+        location / {
+          proxy_pass http://127.0.0.1:8089;
+        }
+      }

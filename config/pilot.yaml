@@ -1,0 +1,12 @@
+pilot:
+  environment: dev
+  tak_fqdn: tak.example.com
+  cloud:
+    provider: digitalocean
+    region: nyc3
+  edge:
+    hostname: tak-edge-01
+    mode: degraded-ready
+backup:
+  enabled: true
+  destination: /var/backups/tak

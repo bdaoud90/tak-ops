@@ -1,0 +1,6 @@
+---
+- name: Configure edge node
+  hosts: edge_nodes
+  become: true
+  roles:
+    - edge_node
