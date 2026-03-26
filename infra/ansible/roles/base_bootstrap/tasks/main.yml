@@ -1,17 +1,23 @@
 ---
-- name: Install base packages
+- name: Update apt cache
   ansible.builtin.apt:
-    name:
-      - curl
-      - jq
-      - unzip
-      - ufw
     update_cache: true
+    cache_valid_time: 3600
 
-- name: Ensure TAK root exists
+- name: Install baseline bootstrap packages
+  ansible.builtin.apt:
+    name: "{{ tak_bootstrap_packages }}"
+    state: present
+
+- name: Ensure TAK directories exist
   ansible.builtin.file:
-    path: "{{ tak_install_root }}"
+    path: "{{ item.path }}"
     state: directory
     owner: root
     group: root
-    mode: "0755"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "/opt/tak", mode: "0755" }
+    - { path: "{{ tak_manual_staging_dir }}", mode: "0750" }
+    - { path: "/etc/tak", mode: "0755" }
+    - { path: "/var/log/tak", mode: "0755" }

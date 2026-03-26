@@ -43,11 +43,8 @@ jobs:
             echo "::warning::terraform not installed in runner; skipping terraform checks"
           fi
 
-      - name: Ansible syntax-check
+      - name: Ansible syntax-check (must pass)
+        env:
+          ANSIBLE_CONFIG: infra/ansible/ansible.cfg
         run: |
-          if command -v ansible-playbook >/dev/null 2>&1; then
-            ansible-playbook -i infra/ansible/inventories/dev/hosts.yml --syntax-check infra/ansible/playbooks/site.yml
-            ansible-playbook -i infra/ansible/inventories/dev/hosts.yml --syntax-check infra/ansible/playbooks/edge-node.yml
-          else
-            echo "::warning::ansible-playbook unavailable; skipping ansible syntax checks"
-          fi
+          ansible-playbook --syntax-check -i infra/ansible/inventories/dev/hosts.yml infra/ansible/playbooks/site.yml

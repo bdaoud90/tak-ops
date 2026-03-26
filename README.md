@@ -10,13 +10,25 @@ This repository is designed to be operationally useful **without** redistributin
 ## What is automated
 - Terraform for cloud infra (droplet, volume, firewall, optional DNS)
 - Ansible for cloud host baseline (`tak_servers`) and edge node baseline (`edge_nodes`)
+- `base_bootstrap` role for baseline host prep (packages + required directories)
 - Operator scripts for config validation, layered smoke tests, backups/restores, and post-install checks
-- CI for shell/python/terraform/ansible validation (with explicit optional-tool handling)
+- CI for shell/python/terraform/ansible validation
 
 ## What remains manual
 - **Manual operator step**: acquire/install restricted TAK artifacts
 - **Manual operator step**: provide cert/key material and deployment-specific service names
 - **Manual operator step**: map placeholder validation checks to actual TAK service/process names
+
+## Ansible execution model
+- Intended Ansible config: `infra/ansible/ansible.cfg`
+- Roles live under: `infra/ansible/roles/`
+- Recommended local syntax-check command:
+  ```bash
+  ANSIBLE_CONFIG=infra/ansible/ansible.cfg \
+    ansible-playbook --syntax-check \
+    -i infra/ansible/inventories/dev/hosts.yml \
+    infra/ansible/playbooks/site.yml
+  ```
 
 ## Inventory model
 - `tak_servers` = cloud server(s)

@@ -4,12 +4,17 @@
 - `tak_servers`: cloud TAK server hosts
 - `edge_nodes`: Raspberry Pi or edge fallback hosts
 
+## Config and role resolution
+- Use `infra/ansible/ansible.cfg` as the active config.
+- `roles_path = roles` resolves to `infra/ansible/roles` when running with that config.
+- Do **not** create workaround roles under `playbooks/roles`.
+
 ## Playbooks
 - `playbooks/site.yml` - applies server roles to `tak_servers`
 - `playbooks/edge-node.yml` - applies edge baseline to `edge_nodes`
 
 ## Roles
-- `base_bootstrap` - package/bootstrap prerequisites
+- `base_bootstrap` - baseline package install and required TAK directory scaffolding
 - `hardening` - basic SSH controls
 - `reverse_proxy_tls` - nginx + TLS scaffold
 - `backup` - backup directory and scheduled task
@@ -18,9 +23,13 @@
 
 ## Usage
 ```bash
-ansible-playbook -i inventories/dev/hosts.yml playbooks/site.yml
-ansible-playbook -i inventories/dev/hosts.yml playbooks/edge-node.yml
+ANSIBLE_CONFIG=infra/ansible/ansible.cfg \
+  ansible-playbook --syntax-check -i inventories/dev/hosts.yml playbooks/site.yml
+
+ANSIBLE_CONFIG=infra/ansible/ansible.cfg \
+  ansible-playbook -i inventories/dev/hosts.yml playbooks/site.yml
 ```
 
 ## Manual boundaries
-- TODO: inject operator-specific certificates, service configs, and restricted TAK install actions per vendor guidance.
+- `base_bootstrap` prepares host baseline and directories only.
+- Manual operator step: install restricted TAK components from authorized artifacts.

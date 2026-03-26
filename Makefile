@@ -1,9 +1,9 @@
 SHELL := /usr/bin/env bash
 
-.PHONY: help init lint test validate terraform-fmt terraform-validate ansible-syntax smoke post-install-validate
+.PHONY: help init lint test validate terraform-fmt terraform-validate ansible-lint ansible-check smoke post-install-validate
 
 help:
-	@echo "Targets: init lint test validate terraform-fmt terraform-validate ansible-syntax smoke post-install-validate"
+	@echo "Targets: init lint test validate terraform-fmt terraform-validate ansible-lint ansible-check smoke post-install-validate"
 
 init:
 	@chmod +x scripts/*.sh
@@ -27,9 +27,10 @@ terraform-validate:
 	@terraform -chdir=infra/terraform/environments/prod init -backend=false >/dev/null
 	@terraform -chdir=infra/terraform/environments/prod validate
 
-ansible-syntax:
-	@ansible-playbook -i infra/ansible/inventories/dev/hosts.yml --syntax-check infra/ansible/playbooks/site.yml
-	@ansible-playbook -i infra/ansible/inventories/dev/hosts.yml --syntax-check infra/ansible/playbooks/edge-node.yml
+ansible-lint:
+	@ANSIBLE_CONFIG=infra/ansible/ansible.cfg ansible-playbook --syntax-check -i infra/ansible/inventories/dev/hosts.yml infra/ansible/playbooks/site.yml
+
+ansible-check: ansible-lint
 
 validate: lint test
 
