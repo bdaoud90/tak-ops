@@ -45,14 +45,14 @@ jobs:
           terraform -chdir=infra/terraform/environments/prod init -backend=false
           terraform -chdir=infra/terraform/environments/prod validate
 
-      - name: Ansible syntax check
+      - name: Ansible syntax check (site)
         run: |
           ANSIBLE_CONFIG=infra/ansible/ansible.cfg \
           ansible-playbook --syntax-check \
           -i infra/ansible/inventories/dev/hosts.yml \
           infra/ansible/playbooks/site.yml
 
-      - name: Ansible syntax check
+      - name: Ansible syntax check (edge)
         run: |
           ANSIBLE_CONFIG=infra/ansible/ansible.cfg \
           ansible-playbook --syntax-check \
@@ -61,9 +61,3 @@ jobs:
 
       - name: Pytest
         run: pytest -q
-      - name: Ansible syntax check (edge)
-        run: | 
-          ANSIBLE_CONFIG=infra/ansible/ansible.cfg \
-          ansible-playbook --syntax-check \ 
-          -i infra/ansible/inventories/dev/hosts.yml \
-          infra/ansible/playbooks/edge-node.yml
