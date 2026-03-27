@@ -24,3 +24,9 @@ jobs:
         run: ./scripts/validate-config.sh
       - name: Pytest
         run: pytest -q
+      - name: Ansible syntax check (edge)
+        run: | 
+          ANSIBLE_CONFIG=infra/ansible/ansible.cfg \
+          ansible-playbook --syntax-check \ 
+          -i infra/ansible/inventories/dev/hosts.yml \
+          infra/ansible/playbooks/edge-node.yml
