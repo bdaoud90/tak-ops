@@ -64,3 +64,15 @@ variable "subdomain" {
   type        = string
   default     = "tak"
 }
+
+variable "admin_ports" {
+  description = "Administrative ingress TCP ports (pilot default: SSH)."
+  type        = list(number)
+  default     = [22]
+}
+
+variable "service_ports" {
+  description = "Service ingress TCP ports (pilot defaults: HTTPS reverse proxy and TAK service placeholder)."
+  type        = list(number)
+  default     = [443, 8089]
+}

@@ -41,6 +41,15 @@ It intentionally does **not** vendor proprietary/restricted TAK binaries.
 
 ---
 
+## Pilot transport profile assumptions
+- Administrative access: SSH TCP/22 (configurable with Terraform `admin_ports`).
+- Public entry point: HTTPS reverse proxy on TCP/443 (configurable with Terraform `service_ports`).
+- Backend/pilot placeholder service: TCP/8089 (configurable with Terraform `service_ports`).
+
+These defaults are pilot-friendly scaffolding and should be narrowed for production deployment policy.
+
+---
+
 ## Secrets and sensitive configuration
 - Copy `.env.example` to `.env`.
 - Keep `.env` out of source control (already ignored by `.gitignore`).
@@ -62,28 +71,29 @@ It intentionally does **not** vendor proprietary/restricted TAK binaries.
    - `terraform init`
    - `terraform plan -var-file=terraform.tfvars`
    - `terraform apply -var-file=terraform.tfvars`
-3. **Configure host with Ansible**
-   - `ansible-playbook -i infra/ansible/inventories/dev/hosts.yml infra/ansible/playbooks/site.yml`
+3. **Configure cloud host with Ansible (`tak_servers`)**
+   - `ANSIBLE_CONFIG=infra/ansible/ansible.cfg ansible-playbook -i infra/ansible/inventories/dev/hosts.yml infra/ansible/playbooks/site.yml`
 4. **Install restricted TAK components (manual handoff)**
    - Follow `docs/deployment-plan.md` and vendor instructions.
 5. **Run validation and smoke tests**
-   - `./scripts/smoke-test.sh <fqdn-or-ip>`
-   - Verify backup with `./scripts/backup.sh` and restore procedure docs.
-6. **Prepare edge node**
-   - `./scripts/bootstrap-edge.sh --inventory infra/ansible/inventories/dev/hosts.yml`
-   - Validate degraded comms SOP.
+   - `./scripts/smoke-test.sh --target <fqdn-or-ip>`
+   - Verify backup with `./scripts/backup.sh` and restore with staging default: `./scripts/restore.sh --archive <archive.tar.gz>`
+6. **Prepare edge node (`edge_nodes`)**
+   - `ANSIBLE_CONFIG=infra/ansible/ansible.cfg ansible-playbook -i infra/ansible/inventories/dev/hosts.yml infra/ansible/playbooks/edge-node.yml`
 7. **Promote to prod**
    - Repeat steps using `infra/terraform/environments/prod` and prod inventory.
 
 ---
 
-## Safe pilot testing guidance
-- Start in `dev` only.
-- Restrict ingress CIDRs to trusted operator ranges.
-- Use non-production certs/test identities in early dry runs.
-- Run smoke tests after each major step (provisioning, config, manual install, restore test).
-- Perform at least one backup + restore drill before pilot go-live.
-- Record outcomes in runbooks and change logs.
+## Tooling dependencies
+- Python 3.11+
+- `pytest`
+- `PyYAML` (required by `scripts/validate-config.sh`)
+- `terraform`
+- `ansible`
+- Shell utilities used by scripts (`curl`, `timeout`, `sha256sum`, `tar`)
+
+`make init` installs Python dependencies (`pytest`, `PyYAML`) for local validation.
 
 ---
 
@@ -100,6 +110,8 @@ It intentionally does **not** vendor proprietary/restricted TAK binaries.
 ./scripts/create-env.sh
 ./scripts/validate-config.sh
 make lint
+make terraform-validate
+make ansible-lint
 make test
 ```
 

@@ -7,3 +7,5 @@ variable "enable_dns" { type = bool }
 variable "domain" { type = string }
 variable "subdomain" { type = string }
 variable "allowed_ingress_cidrs" { type = list(string) }
+variable "admin_ports" { type = list(number) }
+variable "service_ports" { type = list(number) }

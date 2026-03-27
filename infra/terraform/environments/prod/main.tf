@@ -10,6 +10,8 @@ module "stack" {
   domain              = var.domain
   subdomain           = var.subdomain
   allowed_ingress_cidrs = var.allowed_ingress_cidrs
+  admin_ports           = var.admin_ports
+  service_ports         = var.service_ports
 }
 
 output "droplet_ipv4" {
