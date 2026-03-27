@@ -1,16 +1,16 @@
 SHELL := /usr/bin/env bash
 
-.PHONY: help init validate lint test terraform-fmt terraform-validate ansible-lint smoke
+.PHONY: help init validate lint test terraform-fmt terraform-validate ansible-lint ansible-check smoke
 
 help:
-	@echo "Available targets: init validate lint test terraform-fmt terraform-validate ansible-lint smoke"
+	@echo "Available targets: init validate lint test terraform-fmt terraform-validate ansible-lint ansible-check smoke"
 
 init:
 	@chmod +x scripts/*.sh
 	@python3 -m venv .venv
-	@. .venv/bin/activate && pip install -U pip pytest
+	@. .venv/bin/activate && pip install -U pip pytest PyYAML
 
-validate: terraform-fmt terraform-validate lint test
+validate: terraform-fmt terraform-validate lint test ansible-lint
 
 lint:
 	@bash -n scripts/*.sh
@@ -30,7 +30,9 @@ terraform-validate:
 	@terraform -chdir=infra/terraform/environments/prod validate
 
 ansible-lint:
-	@ansible-playbook --syntax-check infra/ansible/playbooks/site.yml
+	@ANSIBLE_CONFIG=infra/ansible/ansible.cfg ansible-playbook --syntax-check -i infra/ansible/inventories/dev/hosts.yml infra/ansible/playbooks/site.yml
+
+ansible-check: ansible-lint
 
 smoke:
 	@./scripts/smoke-test.sh

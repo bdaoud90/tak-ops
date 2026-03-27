@@ -12,4 +12,7 @@
     content: |
       #!/usr/bin/env bash
       set -euo pipefail
+      # Scaffold behavior only: this intentionally stays simple.
+      # Prefer scripts/backup.sh for audited archive + checksum output.
+      # Manual operator step: coordinate backups with TAK service state before production use.
       tar -czf {{ backup_dir }}/tak-$(date +%F).tar.gz {{ tak_install_root }}

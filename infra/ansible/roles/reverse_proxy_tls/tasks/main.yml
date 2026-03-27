@@ -24,3 +24,24 @@
           proxy_pass http://127.0.0.1:8089;
         }
       }
+
+- name: Enable TAK placeholder site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/tak-placeholder.conf
+    dest: /etc/nginx/sites-enabled/tak-placeholder.conf
+    state: link
+
+- name: Disable default nginx site if present
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+
+- name: Validate nginx configuration
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Ensure nginx service is enabled and reloaded
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded
+    enabled: true

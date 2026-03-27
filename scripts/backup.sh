@@ -5,7 +5,7 @@ usage() {
   cat <<'USAGE'
 Usage: backup.sh [--source DIR] [--dest DIR] [--name PREFIX] [--help]
 
-Create a compressed TAK backup archive.
+Create a compressed TAK backup archive and a SHA-256 checksum file.
 USAGE
 }
 
@@ -33,12 +33,20 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+command -v sha256sum >/dev/null 2>&1 || { echo "ERROR: sha256sum is required" >&2; exit 1; }
 [[ -d "$SRC_DIR" ]] || { echo "ERROR: Source directory not found: $SRC_DIR" >&2; exit 1; }
 mkdir -p "$DEST_DIR"
 [[ -w "$DEST_DIR" ]] || { echo "ERROR: Destination not writable: $DEST_DIR" >&2; exit 1; }
 
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT="${DEST_DIR}/${NAME_PREFIX}-${STAMP}.tar.gz"
+CHECKSUM_FILE="${OUT}.sha256"
 
 tar -czf "$OUT" "$SRC_DIR"
-echo "[backup] created: $OUT"
+(
+  cd "$(dirname "$OUT")"
+  sha256sum "$(basename "$OUT")" > "$(basename "$CHECKSUM_FILE")"
+)
+
+echo "[backup] archive: $OUT"
+echo "[backup] checksum: $CHECKSUM_FILE"

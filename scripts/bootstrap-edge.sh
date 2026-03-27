@@ -46,4 +46,4 @@ command -v ansible-playbook >/dev/null 2>&1 || { echo "ERROR: ansible-playbook n
 [[ -f "$PLAYBOOK" ]] || { echo "ERROR: Playbook not found: $PLAYBOOK" >&2; exit 1; }
 
 echo "[bootstrap-edge] inventory=$INVENTORY playbook=$PLAYBOOK"
-ansible-playbook -i "$INVENTORY" "$PLAYBOOK"
+ANSIBLE_CONFIG=infra/ansible/ansible.cfg ansible-playbook -i "$INVENTORY" "$PLAYBOOK"
