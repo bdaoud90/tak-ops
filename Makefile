@@ -8,7 +8,7 @@ help:
 init:
 	@chmod +x scripts/*.sh
 	@python3 -m venv .venv
-	@. .venv/bin/activate && pip install -U pip pytest PyYAML
+	@. .venv/bin/activate && pip install -U pip pytest PyYAML ansible
 
 validate: terraform-fmt terraform-validate lint test ansible-lint
 
