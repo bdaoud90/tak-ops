@@ -12,6 +12,30 @@ It intentionally does **not** vendor proprietary/restricted TAK binaries.
 
 ---
 
+## Current TAK 5.7 deployment status (checkpoint: 2026-04-12)
+
+Current field state (Ubuntu 24.04 DigitalOcean droplet, package deployment under `/opt/tak`) is **MVP demo-ready baseline**:
+- Core listener ports confirmed up: `8443` (HTTPS), `8446` (cert HTTPS), `8089` (TLS ingest).
+- PostgreSQL 15 cluster is online and reachable by TAK repository user (`martiuser` to `cot`).
+- TAK keystore/truststore artifacts are present and readable by runtime user.
+- Remaining warnings are non-blocking for MVP client connectivity testing (see below).
+
+### Service architecture note (important)
+TAK runtime here is a **multi-service stack** orchestrated by `/etc/init.d/takserver`, not a single monolith. Wrapper service status can look healthy while individual subservices are unhealthy or partially started. Always validate per-service logs and socket bindings.
+
+### Major issues encountered and resolved (summary)
+- PostgreSQL wrapper-service confusion: `systemctl status postgresql` was insufficient; `pg_lsclusters` exposed actual cluster-down state.
+- PostgreSQL on small droplet: memory settings initially prevented cluster startup; reduced memory settings restored service.
+- Certificate chain drift: stale CA/private artifacts plus password drift caused misleading TLS failures.
+- `CoreConfig.xml` alignment: keystore/truststore passwords had to exactly match cert-generation values.
+- Debugging method change: `/opt/tak/logs/*` by component provided reliable signal versus wrapper-level status alone.
+
+### Current non-blocking warnings to track
+- TLS is enabled but CRL/OCSP validation is not configured (hardening backlog item).
+- Plugin service produced earlier noisy/unstable traces and should be treated carefully during MVP demos.
+
+---
+
 ## Automation boundaries (what is automated vs manual)
 
 ### Automated provisioning
