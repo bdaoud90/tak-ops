@@ -157,6 +157,10 @@ make ansible-lint
 make test
 ```
 
+## Shell script syntax checks (docs/CI note)
+- Run `bash -n scripts/*.sh` to catch shell syntax errors early.
+- `make lint` already includes this check, so any CI runner invoking `make lint` will enforce shell syntax validation.
+
 ## Known limitations
 - This repo does not redistribute restricted TAK components.
 - Some install/integration steps remain manual by design.
