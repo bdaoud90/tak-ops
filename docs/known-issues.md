@@ -1,6 +1,6 @@
 # TAK Server Known Issues (Operational)
 
-This document tracks recurrent operational issues observed during TAK 5.7 deployment/debug on Ubuntu 24.04.
+This document tracks recurrent operational issues observed during TAK 5.7 deployment/debug on Ubuntu 24.04 (validated environment). Historical references to earlier Ubuntu 22.04 planning assumptions are retained for context only.
 
 ## 1) Stale CA/private key artifacts poison cert regeneration
 
@@ -121,3 +121,90 @@ rg -n "CRL|OCSP|revocation" /opt/tak/logs/takserver-messaging.log
 **Fix / mitigation**
 - Track as security hardening item (non-blocking for MVP functional testing).
 - Implement CRL/OCSP policy and verify log behavior after deployment.
+
+---
+
+## 7) Client endpoint confusion across `8089`, `8443`, and `8446`
+
+**Symptom**
+- Operators enroll clients on the wrong endpoint and observe handshake/auth failures.
+
+**Likely cause**
+- Prior guidance favored `8446` for first tests; current validated workflow favors `8089` with pre-issued certs.
+
+**Verification commands**
+```bash
+ss -ltnp | rg ':(8089|8443|8446)\b'
+tail -n 200 /opt/tak/logs/takserver-messaging.log
+tail -n 200 /opt/tak/logs/takserver-api.log
+```
+
+**Fix / mitigation**
+- Use `8089` TLS + pre-issued client cert as primary path.
+- Keep role distinctions explicit:
+  - `8089`: primary TAK client onboarding path.
+  - `8446`: alternate cert-auth HTTPS path.
+  - `8443`: HTTPS/API/web path.
+
+---
+
+## 8) Android trust/client-cert conflict and device variance
+
+**Symptom**
+- CivTAK import appears successful, but connection still fails with TLS handshake/trust errors.
+
+**Likely cause**
+- Android/OEM credential handling differs by device and OS, especially when user CA trust expectations and client-certificate use interact.
+
+**Verification commands**
+```bash
+tail -n 200 /opt/tak/logs/takserver-messaging.log
+ss -tnp | rg ':(8089|8446)\b'
+```
+
+**Fix / mitigation**
+- Re-test against `8089` first, then `8446` fallback.
+- Re-import `.p12` and verify password correctness.
+- Record device model + Android version alongside failure mode.
+
+---
+
+## 9) SCP path/permission friction for client cert export
+
+**Symptom**
+- `scp` from `/opt/tak/certs/files/` fails due to permissions or policy constraints.
+
+**Likely cause**
+- Non-root operators cannot directly read export material in `/opt/tak/certs/files/`.
+
+**Verification commands**
+```bash
+ls -l /opt/tak/certs/files/
+```
+
+**Fix / mitigation**
+- Stage cert bundle to `/home/ubuntu/` before transfer:
+```bash
+sudo cp /opt/tak/certs/files/user.p12 /home/ubuntu/
+sudo chown ubuntu:ubuntu /home/ubuntu/user.p12
+scp ubuntu@<server-ip>:/home/ubuntu/user.p12 .
+```
+
+---
+
+## Verified vs Unresolved vs Backlog
+
+**Verified**
+- Ubuntu 24.04 is the factual validated operating environment.
+- `8089` TLS with pre-issued certs is the current primary client onboarding path.
+- `8443`/`8446` are retained with specific, non-primary roles.
+- SCP staging via `/home/ubuntu/` resolves common export path friction.
+
+**Unresolved**
+- Android trust/client-cert behavior remains inconsistent across device classes.
+- Plugin subsystem still introduces troubleshooting noise.
+
+**Backlog**
+- Enforce CRL/OCSP in production profiles.
+- Publish standardized cert-distribution SOP (including secure staging cleanup).
+- Expand device-level CivTAK compatibility matrix.

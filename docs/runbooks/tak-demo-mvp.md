@@ -8,7 +8,8 @@ Bring the current TAK Server deployment to a reproducible **demo-ready state** f
 This runbook reflects the operational checkpoint captured on **2026-04-12**.
 
 ## Scope and assumptions
-- Host: DigitalOcean droplet running Ubuntu 24.04
+- Host: DigitalOcean droplet running Ubuntu 24.04 (**validated environment**)
+- Historical note: earlier planning referenced Ubuntu 22.04, but the verified checkpoint environment is 24.04
 - TAK: package deployment under `/opt/tak`
 - Service wrapper: `/etc/init.d/takserver`
 - PostgreSQL: version 15
@@ -82,15 +83,15 @@ Expected pattern:
 
 ---
 
-## 2.1 CoreConfig.xml effective state to preserve
+## 2) CoreConfig.xml effective state to preserve
 
 Current effective configuration lessons:
 - Listener definitions include:
   - `8089` (`stdssl` TLS ingest)
   - `8090` (`quic`)
-  - `8443` (HTTPS)
+  - `8443` (HTTPS/API)
   - `8444` (federation HTTPS)
-  - `8446` (cert HTTPS)
+  - `8446` (certificate-auth HTTPS)
 - Repository block should remain aligned to PostgreSQL local endpoint:
   - JDBC URL: `jdbc:postgresql://127.0.0.1:5432/cot`
   - DB user: `martiuser`
@@ -100,7 +101,7 @@ Current effective configuration lessons:
 
 ---
 
-## 2) Key troubleshooting lessons (operator notes)
+## 3) Key troubleshooting lessons (operator notes)
 
 1. **Use `pg_lsclusters` as source of truth** for PostgreSQL health; wrapper/systemd views alone can mislead.
 2. **Cert regeneration requires clean state** when passwords drift: stale CA and old generated artifacts can poison the next run.
@@ -109,69 +110,90 @@ Current effective configuration lessons:
 
 ---
 
-## 3) Demo-ready current state (known good)
+## 4) Demo-ready current state (known good)
 
 A known-good MVP baseline includes:
 - PostgreSQL 15 cluster online
 - `cot` DB reachable
 - `martiuser` able to connect (temporarily elevated to `SUPERUSER` during troubleshooting)
 - Core listeners online on:
-  - `8443` (HTTPS)
-  - `8446` (cert-auth HTTPS endpoint for first client tests)
+  - `8443` (HTTPS/API)
+  - `8446` (certificate-auth HTTPS path)
   - `8089` (TLS ingest)
 - API/messaging/retention startup logs showing normal initialization
 
 ---
 
-## 4) WinTAK client test procedure (Windows)
+## 5) WinTAK client test procedure (Windows)
 
-### 4.1 Prepare certificate
-1. On server, copy one client cert bundle from `/opt/tak/certs/files/`:
+### 5.1 Prepare certificate and stage to operator workstation
+1. On server, choose one client cert bundle from `/opt/tak/certs/files/`:
    - `admin.p12` (admin identity), or
    - `user.p12` (standard user identity)
-2. Transfer securely to Windows test workstation.
+2. If direct copy is blocked by permission/path policy, use staging workaround:
+   ```bash
+   sudo cp /opt/tak/certs/files/user.p12 /home/ubuntu/
+   sudo chown ubuntu:ubuntu /home/ubuntu/user.p12
+   ```
+3. Transfer to Windows with SCP (example):
+   ```bash
+   scp ubuntu@178.62.235.44:/home/ubuntu/user.p12 .
+   ```
 
-### 4.2 Import in WinTAK
+### 5.2 Import in WinTAK
 1. Open WinTAK certificate/import workflow.
 2. Import the selected `.p12` using the correct import password.
 3. Confirm certificate appears in client identity/cert store.
 
-### 4.3 Configure server endpoint
+### 5.3 Configure server endpoint (primary)
 - Host/IP: `178.62.235.44`
-- Primary test port: `8446`
-- Rationale:
-  - `8446` is first direct cert-auth endpoint to validate client enrollment path.
-  - `8443` is primarily web/API path.
-  - `8089` is TLS ingest path and not first-choice for initial direct UI enrollment testing.
+- **Primary test port: `8089`**
+- Workflow: TLS + pre-issued client cert imported into WinTAK first
 
-### 4.4 Observe server during connection attempts
+Role distinctions (retain for operators):
+- `8089`: primary TAK client connection path for MVP onboarding.
+- `8446`: certificate-auth HTTPS endpoint for alternate/troubleshooting validation.
+- `8443`: HTTPS/API/web path, not the primary WinTAK enrollment path.
+
+### 5.4 Observe server during connection attempts
 On server, run in parallel:
 ```bash
 tail -f /opt/tak/logs/takserver-api.log /opt/tak/logs/takserver-messaging.log
-ss -tnp | rg ':8446\b'
+ss -tnp | rg ':(8089|8446)\b'
 ```
 Watch for:
-- new inbound TCP sessions to `:8446`
+- new inbound TCP sessions to `:8089` (or `:8446` if doing alternate path test)
 - successful auth/session log entries (or clear TLS/cert errors)
 
 ---
 
-## 5) CivTAK client test procedure (Android)
+## 6) CivTAK client test procedure (Android)
 
-### 5.1 Prepare certificate
+### 6.1 Prepare certificate
 1. Copy `user.p12` from `/opt/tak/certs/files/`.
-2. Transfer to Android device securely.
+2. If needed, stage first to `/home/ubuntu/` then SCP/ADB transfer (same workaround pattern as WinTAK prep).
+3. Transfer to Android device securely.
 
-### 5.2 Import in CivTAK
+### 6.2 Import in CivTAK
 1. Open CivTAK certificate management/import.
 2. Import `user.p12` with correct password.
 3. Confirm identity certificate is active.
 
-### 5.3 Configure connection
+### 6.3 Configure connection
 - Server: `178.62.235.44`
-- Port: `8446` (start here)
+- Start with port: `8089`
+- Keep `8446` as fallback troubleshooting path.
 
-### 5.4 Validate basic data flow
+### 6.4 Android limitations and trust/client-cert conflict notes
+- Android behavior varies by version and OEM policy for user-installed credentials.
+- On some devices, enabling strict server trust checks while also using a user-installed client certificate can produce handshake failures.
+- If connection fails after certificate import:
+  1. Reconfirm `.p12` password/import success.
+  2. Re-test on `8089` first, then `8446`.
+  3. Review server logs for TLS alert/handshake clues.
+  4. Document device model + Android version for repeatability.
+
+### 6.5 Validate basic data flow
 After connecting:
 1. Confirm connection status in CivTAK.
 2. Send a simple marker or position update.
@@ -179,17 +201,25 @@ After connecting:
 
 ---
 
-## 6) Post-demo hardening backlog
+## 7) Verified vs Unresolved vs Backlog
 
-Track and execute after MVP connectivity validation:
-1. Enable and validate CRL/OCSP revocation checking.
-2. Remove temporary DB `SUPERUSER` elevation from `martiuser`; apply least-privilege grants.
-3. Reintroduce/tune plugins and federation only after stable client baseline is confirmed.
-4. Audit `CoreConfig.xml` for unnecessary complexity and normalize localhost references to `127.0.0.1` where appropriate.
+**Verified**
+- Ubuntu 24.04 host is current validated environment.
+- WinTAK/CivTAK primary onboarding path is `8089` with pre-issued client certs.
+- `8443`/`8446` remain available and documented with distinct role boundaries.
+
+**Unresolved**
+- Android trust-store/client-cert interaction is not uniformly predictable across devices.
+- Plugin log noise can still complicate rapid root-cause isolation.
+
+**Backlog**
+- Enable and validate CRL/OCSP revocation checking.
+- Remove temporary DB `SUPERUSER` elevation from `martiuser`; apply least-privilege grants.
+- Build a tested Android matrix (device + OS + cert import path + outcome).
 
 ---
 
-## 7) Fast rollback / triage prompts
+## 8) Fast rollback / triage prompts
 
 If client onboarding fails unexpectedly:
 1. Re-run listener check (`ss -ltnp`).
