@@ -4,7 +4,7 @@ Production-minded operations/infrastructure repository for deploying and operati
 
 ## Scope
 This repository is designed for a small pilot with:
-1. A cloud-hosted TAK server stack on DigitalOcean (Ubuntu 22.04 baseline).
+1. A cloud-hosted TAK server stack on DigitalOcean (**validated environment: Ubuntu 24.04**; earlier planning baseline was Ubuntu 22.04).
 2. A Raspberry Pi edge node for degraded/offline local operations.
 3. Operator tooling for validation, smoke tests, backup/restore, and report data preparation.
 
@@ -15,7 +15,7 @@ It intentionally does **not** vendor proprietary/restricted TAK binaries.
 ## Current TAK 5.7 deployment status (checkpoint: 2026-04-12)
 
 Current field state (Ubuntu 24.04 DigitalOcean droplet, package deployment under `/opt/tak`) is **MVP demo-ready baseline**:
-- Core listener ports confirmed up: `8443` (HTTPS), `8446` (cert HTTPS), `8089` (TLS ingest).
+- Core listener ports confirmed up: `8443` (HTTPS/API), `8446` (certificate-auth HTTPS), `8089` (primary WinTAK/CivTAK TLS connection path with pre-issued client certs).
 - PostgreSQL 15 cluster is online and reachable by TAK repository user (`martiuser` to `cot`).
 - TAK keystore/truststore artifacts are present and readable by runtime user.
 - Remaining warnings are non-blocking for MVP client connectivity testing (see below).
@@ -33,6 +33,21 @@ TAK runtime here is a **multi-service stack** orchestrated by `/etc/init.d/takse
 ### Current non-blocking warnings to track
 - TLS is enabled but CRL/OCSP validation is not configured (hardening backlog item).
 - Plugin service produced earlier noisy/unstable traces and should be treated carefully during MVP demos.
+- Android clients may fail when system trust assumptions conflict with per-connection client-certificate handling; see runbook for constraints.
+
+### Verified vs Unresolved vs Backlog
+**Verified**
+- Ubuntu 24.04 is the validated deployment target for current operations.
+- `8089` with TLS + pre-issued client certificates is the current primary client test workflow.
+- `8443` and `8446` remain documented and active with distinct roles.
+
+**Unresolved**
+- Android trust-store and client-cert coexistence behavior remains device/OS-version dependent.
+- Plugin subsystem still contributes noise during troubleshooting.
+
+**Backlog**
+- Enable CRL/OCSP revocation checking.
+- Formalize Android certificate onboarding SOP by device profile.
 
 ---
 
@@ -68,7 +83,10 @@ TAK runtime here is a **multi-service stack** orchestrated by `/etc/init.d/takse
 ## Pilot transport profile assumptions
 - Administrative access: SSH TCP/22 (configurable with Terraform `admin_ports`).
 - Public entry point: HTTPS reverse proxy on TCP/443 (configurable with Terraform `service_ports`).
-- Backend/pilot placeholder service: TCP/8089 (configurable with Terraform `service_ports`).
+- TAK client workflow:
+  - `8089` TLS + pre-issued client cert import is the primary current path for WinTAK/CivTAK enrollment testing.
+  - `8446` remains cert-auth HTTPS path for alternate validation scenarios.
+  - `8443` remains web/API HTTPS path.
 
 These defaults are pilot-friendly scaffolding and should be narrowed for production deployment policy.
 
