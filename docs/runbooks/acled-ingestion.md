@@ -100,5 +100,6 @@ Use cron or systemd timer every 30–60 minutes in incremental mode.
 Example cron entry:
 
 ```cron
-*/30 * * * * cd /workspace/tak-ops && set -a && . tooling/acled/.env && set +a && python3 tooling/acled/acled_sync.py >> tooling/acled/state/acled_sync.log 2>&1
+# Replace /path/to/tak-ops with the absolute path of your repository checkout.
+*/30 * * * * cd /path/to/tak-ops && set -a && . tooling/acled/.env && set +a && python3 tooling/acled/acled_sync.py >> tooling/acled/state/acled_sync.log 2>&1
 ```

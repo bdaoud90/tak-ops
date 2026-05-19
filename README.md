@@ -10,6 +10,77 @@ This repository is designed for a small pilot with:
 
 It intentionally does **not** vendor proprietary/restricted TAK binaries.
 
+> **Note:** The public-facing **incident tracker** (a situational-awareness
+> data-visualization tool that tracks settler violence and other incidents
+> against West Bank communities, source-reported and ACLED-verified) is a
+> **separate web component on the PALSHIELD website**. It is *not* in this
+> repository — there is no front-end, GitHub Pages site, or iframe embed here.
+> This repo is the infrastructure + ingestion backend that feeds the TAK
+> server/map and, downstream, that public tracker.
+
+---
+
+## For reviewers and maintainers (start here)
+
+This README serves three audiences:
+
+- **Internal operator** — deploy and run the pilot: see
+  [Exact pilot deployment order](#exact-pilot-deployment-order) and
+  `docs/runbooks/`.
+- **Developer/maintainer** — extend tooling/IaC and keep CI green: see
+  [Validation Commands](#validation-commands) and `docs/wiki/`.
+- **External partner reviewer** — assess safe integration points: start at
+  [`docs/partner-review.md`](docs/partner-review.md).
+
+### Current State
+Pilot, **MVP demo-ready baseline** on Ubuntu 24.04 (validated; earlier
+planning baseline was Ubuntu 22.04). Details and field caveats are in
+[Current TAK 5.7 deployment status](#current-tak-57-deployment-status-checkpoint-2026-04-12)
+and [`docs/known-issues.md`](docs/known-issues.md).
+
+### What Works
+- Terraform provisioning (DigitalOcean droplet, firewall, volume, optional DNS).
+- Ansible roles (base bootstrap, hardening, reverse-proxy/TLS, backup, edge node).
+- Operator scripts (env, config validation, smoke test, backup/restore,
+  sanitized operator bundle).
+- Python data tooling (ACLED OAuth sync + normalization, CSV→GeoJSON, GeoJSON
+  validation, Notion export/normalize) with passing unit tests.
+- CI: shell/Python/Terraform/Ansible checks, pytest — **no secrets required**.
+
+### Manual Steps
+TAK binary/cert handoff and operator-specific inputs are intentionally manual —
+see [Automation boundaries](#automation-boundaries-what-is-automated-vs-manual)
+and [Exact pilot deployment order](#exact-pilot-deployment-order).
+
+### Known Gaps
+See [Known limitations](#known-limitations), [`docs/known-issues.md`](docs/known-issues.md),
+and the phased [`docs/backlog/`](docs/backlog/). Highlights: CRL/OCSP revocation
+not yet enabled; Android cert-onboarding SOP not formalized; no media pipeline.
+
+### Validation Commands
+```bash
+./scripts/create-env.sh
+./scripts/validate-config.sh
+make lint              # bash -n scripts/*.sh + python compileall + config validation
+make test              # pytest
+make terraform-validate
+make ansible-lint
+```
+
+### Partner Integration Points
+Buraq AI is being considered for **proposed, not-yet-implemented** AI media
+triage (scene/context tagging, damage classification, evidence organization)
+with mandatory human review. Boundaries and the proposed data contract are in
+[`docs/buraq-ai-integration.md`](docs/buraq-ai-integration.md). Hard rule: no
+biometric ID, face recognition, tracking, targeting, or identity inference.
+
+### Do Not Commit
+Never commit secrets/tokens, certificates/keys, Terraform state, precise
+sensitive coordinates, private server FQDNs/IPs, field or source identities,
+operational procedures, licensed/vendor TAK artifacts, or raw sensitive media.
+Full rules and redaction guidance:
+[`docs/security-and-data-handling.md`](docs/security-and-data-handling.md).
+
 ---
 
 ## Current TAK 5.7 deployment status (checkpoint: 2026-04-12)
@@ -140,12 +211,28 @@ These defaults are pilot-friendly scaffolding and should be narrowed for product
 ---
 
 ## Repository map
-- `infra/terraform/` – cloud provisioning modules and environments
-- `infra/ansible/` – configuration management playbooks/roles
-- `scripts/` – operator shell tooling
-- `tooling/` – Python data pipeline helpers
-- `docs/` – architecture, runbooks, SOPs
-- `.github/` – CI, templates, security policy
+```
+tak-ops/
+├── infra/
+│   ├── terraform/        # DigitalOcean modules + dev/prod environments
+│   └── ansible/          # playbooks (site, edge-node) + hardening roles
+├── scripts/              # operator shell tooling (backup/restore/smoke/etc.)
+├── tooling/
+│   ├── acled/            # ACLED OAuth sync + normalization
+│   ├── geo/              # CSV→GeoJSON, GeoJSON validation
+│   └── notion/           # report export/normalization
+├── tests/                # pytest (acled transform, geo pipeline)
+├── config/               # pilot.yaml (validated by scripts/validate-config.sh)
+├── docs/                 # architecture, runbooks, SOPs, schema, wiki, partner docs
+│   ├── README.md         #   → documentation index (start here)
+│   ├── partner-review.md · data-flow.md · buraq-ai-integration.md
+│   ├── security-and-data-handling.md · glossary.md
+│   ├── schema/           #   incidents-json.md (in-repo + public contract)
+│   ├── runbooks/ · data/ · architecture/ · wiki/ · backlog/
+├── .github/              # CI workflow, issue/PR templates, SECURITY.md
+├── Makefile · ROADMAP.md · .env.example · .gitignore
+```
+Full documentation index: [`docs/README.md`](docs/README.md).
 
 ## Quickstart
 ```bash

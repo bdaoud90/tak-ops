@@ -44,6 +44,7 @@ class FetchWindow:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse CLI arguments (lookback window and log level)."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--lookback-days",
@@ -60,6 +61,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def configure_logging(level: str) -> None:
+    """Configure root logging at the requested level (falls back to INFO)."""
     logging.basicConfig(
         level=getattr(logging, level.upper(), logging.INFO),
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -67,6 +69,7 @@ def configure_logging(level: str) -> None:
 
 
 def require_env(name: str) -> str:
+    """Return a required environment variable or raise if unset/empty."""
     value = os.getenv(name, "").strip()
     if not value:
         raise ValueError(f"Required environment variable missing: {name}")
@@ -74,6 +77,11 @@ def require_env(name: str) -> str:
 
 
 def load_config() -> Config:
+    """Build the immutable Config from environment variables.
+
+    Credentials and endpoints are supplied via env vars only (never committed);
+    see tooling/acled/.env.example.
+    """
     state_dir = Path(os.getenv("ACLED_STATE_DIR", "tooling/acled/state")).resolve()
     output_dir = Path(os.getenv("ACLED_OUTPUT_DIR", str(state_dir))).resolve()
     return Config(
@@ -95,6 +103,7 @@ def load_config() -> Config:
 
 
 def load_state(state_dir: Path) -> dict[str, Any]:
+    """Load incremental-sync state; return empty state if missing/malformed."""
     path = state_dir / STATE_FILE
     if not path.exists():
         LOGGER.info("State file missing at %s; starting with clean state", path)
@@ -112,6 +121,7 @@ def load_state(state_dir: Path) -> dict[str, Any]:
 
 
 def save_state(state_dir: Path, state: dict[str, Any]) -> None:
+    """Persist incremental-sync state as deterministic JSON."""
     state_dir.mkdir(parents=True, exist_ok=True)
     path = state_dir / STATE_FILE
     path.write_text(json.dumps(state, indent=2, sort_keys=True), encoding="utf-8")
@@ -119,6 +129,7 @@ def save_state(state_dir: Path, state: dict[str, Any]) -> None:
 
 
 def oauth_token(config: Config) -> str:
+    """Obtain an OAuth client-credentials bearer token from the token endpoint."""
     payload: dict[str, str] = {
         "grant_type": "client_credentials",
         "client_id": config.client_id,
@@ -148,6 +159,8 @@ def oauth_token(config: Config) -> str:
 
 
 def resolve_window(now_utc: datetime, state: dict[str, Any], lookback_days: int | None) -> FetchWindow:
+    """Resolve the fetch window: explicit lookback, else incremental from state
+    (with a 1-hour overlap), else the default lookback."""
     if lookback_days is not None:
         start = now_utc - timedelta(days=max(1, lookback_days))
         LOGGER.info("Using explicit lookback window: %s days", lookback_days)
@@ -170,6 +183,7 @@ def resolve_window(now_utc: datetime, state: dict[str, Any], lookback_days: int 
 
 
 def parse_records(payload: Any) -> list[dict[str, Any]]:
+    """Extract the list of event dicts from varying ACLED payload shapes."""
     if isinstance(payload, dict):
         for key in ("data", "results", "events"):
             value = payload.get(key)
@@ -181,6 +195,10 @@ def parse_records(payload: Any) -> list[dict[str, Any]]:
 
 
 def fetch(config: Config, token: str, window: FetchWindow) -> list[dict[str, Any]]:
+    """Page through the ACLED events endpoint for the window and return raw rows.
+
+    Stops at a short page, an empty page, or the ACLED_MAX_PAGES safety cap.
+    """
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
     page = 1
     all_rows: list[dict[str, Any]] = []
@@ -224,6 +242,7 @@ def fetch(config: Config, token: str, window: FetchWindow) -> list[dict[str, Any
 
 
 def to_float(value: Any) -> float | None:
+    """Best-effort float coercion; returns None for empty/invalid input."""
     try:
         if value in (None, ""):
             return None
@@ -233,6 +252,7 @@ def to_float(value: Any) -> float | None:
 
 
 def to_int(value: Any) -> int | None:
+    """Best-effort int coercion; returns None for empty/invalid input."""
     try:
         if value in (None, ""):
             return None
@@ -242,6 +262,11 @@ def to_int(value: Any) -> int | None:
 
 
 def normalize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Map raw ACLED rows onto the stable internal schema.
+
+    Rows without a usable event id are dropped; output is sorted by
+    (event_date, event_id) for deterministic, diff-friendly files.
+    """
     normalized: list[dict[str, Any]] = []
     for row in records:
         event_id = row.get("event_id_cnty") or row.get("event_id_no_cnty") or row.get("event_id")
@@ -281,10 +306,16 @@ def normalize(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def to_geojson(events: list[dict[str, Any]]) -> dict[str, Any]:
+    """Build a GeoJSON FeatureCollection from normalized events.
+
+    The raw API record is intentionally excluded from feature properties to
+    keep the published layer lean.
+    """
     features: list[dict[str, Any]] = []
     for event in events:
         lon = event.get("longitude")
         lat = event.get("latitude")
+        # Skip events without coordinates: they cannot be placed on the map layer.
         if lon is None or lat is None:
             continue
 
@@ -301,6 +332,7 @@ def to_geojson(events: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def write_summary(events: list[dict[str, Any]]) -> dict[str, Any]:
+    """Compute aggregate counts (totals, fatalities, by event type/country)."""
     summary: dict[str, Any] = {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "total_events": len(events),
@@ -326,6 +358,7 @@ def write_summary(events: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def write_outputs(config: Config, events: list[dict[str, Any]]) -> None:
+    """Write the latest JSON, GeoJSON, and summary artifacts to output_dir."""
     config.output_dir.mkdir(parents=True, exist_ok=True)
     latest_json = config.output_dir / "acled_latest.json"
     latest_geojson = config.output_dir / "acled_latest.geojson"
@@ -338,6 +371,7 @@ def write_outputs(config: Config, events: list[dict[str, Any]]) -> None:
 
 
 def main() -> int:
+    """Run one ACLED sync: authenticate, fetch, normalize, write, save state."""
     args = parse_args()
     configure_logging(args.log_level)
 

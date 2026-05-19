@@ -13,6 +13,7 @@ EXPECTED_FIELDS = ["id", "title", "lat", "lon", "timestamp"]
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse input and output CSV path arguments."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path, help="Input CSV path")
     parser.add_argument("output", type=Path, help="Output CSV path")
@@ -20,10 +21,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def clean(value: str) -> str:
+    """Collapse internal/edge whitespace to single spaces."""
     return " ".join(value.strip().split())
 
 
 def main() -> int:
+    """Validate columns, normalize rows (drop rows missing id), write sorted CSV."""
     args = parse_args()
     if not args.input.is_file():
         print(f"ERROR: input file not found: {args.input}", file=sys.stderr)

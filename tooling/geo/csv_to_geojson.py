@@ -11,6 +11,7 @@ from pathlib import Path
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse input CSV and output GeoJSON path arguments."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path, help="Input CSV path")
     parser.add_argument("output", type=Path, help="Output GeoJSON path")
@@ -18,6 +19,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def parse_float(value: str, column: str, row_number: int) -> float:
+    """Parse a float, raising a row/column-contextual error on bad input."""
     try:
         return float(value)
     except ValueError as exc:
@@ -25,6 +27,7 @@ def parse_float(value: str, column: str, row_number: int) -> float:
 
 
 def main() -> int:
+    """Convert the input CSV (requires lat/lon columns) to a GeoJSON file."""
     args = parse_args()
     if not args.input.is_file():
         print(f"ERROR: input file not found: {args.input}", file=sys.stderr)

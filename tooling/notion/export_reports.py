@@ -14,6 +14,7 @@ FIELDS = ["id", "title", "lat", "lon", "timestamp"]
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse input NDJSON, output CSV path, and --strict flag."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path, help="Input NDJSON file")
     parser.add_argument("output", type=Path, help="Output CSV path")
@@ -22,6 +23,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def normalize_record(obj: dict[str, Any]) -> dict[str, str]:
+    """Extract and trim the fixed report fields from one record."""
     return {
         "id": str(obj.get("id", "")).strip(),
         "title": str(obj.get("title", "")).strip(),
@@ -32,6 +34,10 @@ def normalize_record(obj: dict[str, Any]) -> dict[str, str]:
 
 
 def main() -> int:
+    """Read NDJSON, normalize records, and write deterministically sorted CSV.
+
+    Malformed lines are skipped (warned), or fail the run under --strict.
+    """
     args = parse_args()
     if not args.input.is_file():
         print(f"ERROR: input file not found: {args.input}", file=sys.stderr)

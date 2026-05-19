@@ -10,12 +10,17 @@ from pathlib import Path
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse the GeoJSON input file path argument."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path, help="GeoJSON file path")
     return parser.parse_args()
 
 
 def main() -> int:
+    """Validate the file is a FeatureCollection of Point features [lon, lat].
+
+    Returns non-zero with a diagnostic message on the first schema violation.
+    """
     args = parse_args()
     if not args.input.is_file():
         print(f"ERROR: input file not found: {args.input}", file=sys.stderr)
