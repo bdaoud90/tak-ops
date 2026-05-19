@@ -37,7 +37,7 @@ cp -n terraform.tfvars.example terraform.tfvars
 terraform init
 terraform plan -var-file=terraform.tfvars
 terraform apply -var-file=terraform.tfvars
-cd /workspace/tak-ops
+cd "$(git rev-parse --show-toplevel)"   # return to repo root (substitute your clone path if not a git checkout)
 ```
 
 ## 4) Ansible inventory + playbook path

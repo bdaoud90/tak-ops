@@ -19,7 +19,7 @@ terraform apply -var-file=terraform.tfvars
 
 ## 3) Configure cloud TAK host group (`tak_servers`)
 ```bash
-cd /workspace/tak-ops
+cd "$(git rev-parse --show-toplevel)"   # return to repo root (substitute your clone path if not a git checkout)
 ANSIBLE_CONFIG=infra/ansible/ansible.cfg \
 ansible-playbook -i infra/ansible/inventories/dev/hosts.yml \
 infra/ansible/playbooks/site.yml

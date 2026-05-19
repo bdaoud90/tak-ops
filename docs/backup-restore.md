@@ -22,8 +22,8 @@ Examples:
 # Safe staging restore (default)
 ./scripts/restore.sh --archive /var/backups/tak/tak-20260101T000000Z.tar.gz
 
-# Explicit staging path
-./scripts/restore.sh --archive /var/backups/tak/tak-20260101T000000Z.tar.gz --destination /tmp/tak-restore
+# Explicit staging path (matches the script default location)
+./scripts/restore.sh --archive /var/backups/tak/tak-20260101T000000Z.tar.gz --destination /var/tmp/tak-restore
 
 # Dangerous live restore (explicit opt-in required)
 ./scripts/restore.sh --archive /var/backups/tak/tak-20260101T000000Z.tar.gz --destination / --live-restore
