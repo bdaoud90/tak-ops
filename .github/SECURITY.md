@@ -3,7 +3,7 @@
 ## Reporting a Vulnerability
 Please do not open public issues for security vulnerabilities.
 
-Report privately to: security@example.com (replace with your operational security inbox).
+Report privately to: agent@oleaobscura.com.
 
 Include:
 - Impacted component(s)
